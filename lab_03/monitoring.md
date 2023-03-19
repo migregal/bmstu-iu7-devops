@@ -18,7 +18,7 @@ $ sudo vim /etc/systemd/system/node_exporter.service
 ```
 
 Configure systemd service to run Node Exporter.
-```toml
+```conf
 [Unit]
 Description=Node Exporter
 After=network.target
@@ -94,7 +94,7 @@ $ sudo vim /etc/systemd/system/alertmanager.service
 ```
 
 Place this as AlertManager config.
-```toml
+```conf
 [Unit]
 Description=Alertmanager Service
 After=network.target
@@ -172,18 +172,23 @@ $ sudo vim /etc/prometheus/prometheus.yml
 
 Put this as Prometheus config. Replace placeholders with correct IPs.
 ```yaml
-global:
+gglobal:
   scrape_interval: 10s
 
 scrape_configs:
 - job_name: 'prometheus'
-  scrape_interval: 5s
   static_configs:
-    - targets: ['<first host IP>:9090']
+    - targets: ['192.168.3.23:9090']
 
 - job_name: node
+  scrape_interval: 5s
   static_configs:
-    - targets: ['<first host IP>:9100', '<second host IP>:9100']
+    - targets: ['192.168.3.23:9100', '192.168.3.25:9100']
+
+- job_name: 'telegraf'
+  scrape_interval: 5s
+  static_configs:
+    - targets: ['192.168.3.25:9126']
 
 rule_files:
   - "alerts.yml"
@@ -231,7 +236,7 @@ Create a prometheus service file.
 $ sudo vim /etc/systemd/system/prometheus.service
 ```
 
-```toml
+```conf
 [Unit]
 Description=Prometheus
 Wants=network-online.target
@@ -264,7 +269,7 @@ $ sudo systemctl enable prometheus
 ### Node Exporter
 
 Do everything from VM1 but place this systemd config instead of previos one.
-```toml
+```conf
 [Unit]
 Description=Node Exporter
 After=network.target
@@ -283,27 +288,98 @@ WantedBy=multi-user.target
 
 ### Nginx
 
-#### Configure
+#### Stats
 
+Add separated server for stub status only:
 ```console
-$ sudo vim /etc/nginx/nginx.conf
+$ sudo vim /etc/nginx/conf.d/stub_status_nginx.conf
 ```
 
-```console
-$ sudo vim /etc/nginx/sites-enabled/default
+And place this contents to created file.
+```
+server {
+        listen 81 default_server;
+        listen [::]:81 default_server;
+
+        root /var/www/html;
+        index index.html index.htm index.nginx-debian.html;
+
+        server_name _;
+
+        location / {
+                try_files $uri $uri/ =404;
+        }
+
+        location /nginx_status {
+                stub_status on;
+                allow 127.0.0.1;
+                allow ::1;
+                deny all;
+        }
+}
 ```
 
-```
-    location /metrics {
-        stub_status on;
-        access_log off;
-        allow 127.0.0.1;
-        deny all;
-    }
-```
-
+Then apply new changes:
 ```console
 $ sudo systemctl restart nginx
+```
+
+#### Logs
+
+Change log files mod to use them later in Telegraf:
+```console
+$ (cd /var/log/nginx/ && sudo chmod 755 access.log error.log)
+```
+
+### Telegraf
+
+```console
+$ sudo apt-get update && sudo apt-get install telegraf
+$ sudo vim /etc/telegraf/telegraf.conf
+```
+
+You need to add next parts to your Telegraf config
+
+#### Nginx Status
+
+Make `[[inputs.nginx]]` part to be like:
+```conf
+[[inputs.nginx]]
+  urls = ["http://localhost:81/nginx_status"]
+  response_timeout = "5s"
+```
+
+#### Nginx logs
+
+The same, just make it to be like that one:
+```conf
+[[inputs.tail]]
+        name_override = "nginxlog"
+        files = ["/var/log/nginx/access.log"]
+        from_beginning = true
+        pipe = false
+        data_format = "grok"
+        grok_patterns = ["%{COMBINED_LOG_FORMAT}"]
+```
+
+#### Misc
+
+Also edit `[[inputs.cpu]] to be like:
+```conf
+[[inputs.cpu]]
+   percpu = false
+   totalcpu = true
+   collect_cpu_time = true
+   report_active = true
+```
+
+Finally, make shure your `[[outputs.prometheus_client]]` looks like the one here.
+
+__**Important**__ - port here and in Prometheus config must match.
+```conf
+[[outputs.prometheus_client]]
+    listen = ":9273"
+    metric_version = 2
 ```
 
 ### Install Grafana
@@ -333,6 +409,10 @@ Restart server to apply new settings
 ```
 $ sudo systemctl restart grafana-server
 ```
+
+### Nginx
+
+#### Configure
 
 Edit nginx config from lab 2 to serve grafana.
 
@@ -380,4 +460,5 @@ $ sudo systemctl restart nginx
 ### Configure Grafana
 
 * Add Prometheus Datasource with address `http://<first host IP>:9090`
-* Import New Dashboard with ID `1860` (or copy on from JSON in this dir)
+* Import New Dashboard with ID `1860` (or copy from `node-exporter-full_rev30.json`)
+* Import New Dashboard with ID `14900` (or copy from `nginx_rev2.json`)
