@@ -331,6 +331,36 @@ Change log files mod to use them later in Telegraf:
 $ (cd /var/log/nginx/ && sudo chmod 755 access.log error.log)
 ```
 
+### Logrotate
+
+```console
+$ sudo apt-get install logrotate
+```
+
+Make sure your `/etc/logrotate.d/nginx` to look like:
+```
+/var/log/nginx/*.log {
+        daily
+        missingok
+        rotate 14
+        compress
+        delaycompress
+        notifempty
+        create 0640 www-data adm
+        sharedscripts
+        prerotate
+                if [ -d /etc/logrotate.d/httpd-prerotate ]; then \
+                        run-parts /etc/logrotate.d/httpd-prerotate; \
+                fi \
+        endscript
+        postrotate
+                invoke-rc.d nginx rotate >/dev/null 2>&1
+        endscript
+}
+```
+
+Logrotate will automatically run on your server, once installed. You don’t need to start the service on boot or set up cron jobs for it.
+
 ### Telegraf
 
 ```console
