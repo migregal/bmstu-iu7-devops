@@ -178,17 +178,17 @@ gglobal:
 scrape_configs:
 - job_name: 'prometheus'
   static_configs:
-    - targets: ['192.168.3.23:9090']
+    - targets: ['<first host IP>:9090']
 
 - job_name: node
   scrape_interval: 5s
   static_configs:
-    - targets: ['192.168.3.23:9100', '192.168.3.25:9100']
+    - targets: ['<first host IP>:9100', '<second host IP>:9100']
 
 - job_name: 'telegraf'
   scrape_interval: 5s
   static_configs:
-    - targets: ['192.168.3.25:9126']
+    - targets: ['<second host IP>:9273']
 
 rule_files:
   - "alerts.yml"
@@ -491,4 +491,5 @@ $ sudo systemctl restart nginx
 
 * Add Prometheus Datasource with address `http://<first host IP>:9090`
 * Import New Dashboard with ID `1860` (or copy from `node-exporter-full_rev30.json`)
-* Import New Dashboard with ID `14900` (or copy from `nginx_rev2.json`)
+* Import New Dashboard with ID `3662` (or copy from `nginx_rev2.json`)
+* Import New Dashboard with ID `14900` (or copy from `prometheus-2-0-overview_rev2.json`)
