@@ -48,7 +48,7 @@ $ sudo systemctl enable node_exporter
 $ sudo wget https://github.com/prometheus/alertmanager/releases/download/v0.24.0/alertmanager-0.24.0.linux-amd64.tar.gz
 $ sudo tar xvf alertmanager-0.24.0.linux-amd64.tar.gz
 $ sudo mkdir /etc/alertmanager /var/lib/prometheus/alertmanager
-$ sudo (cd alertmanager-0.24.0.linux-amd64 && cp alertmanager amtool /usr/local/bin/ && cp alertmanager.yml /etc/alertmanager)
+$ (cd alertmanager-0.24.0.linux-amd64 && cp alertmanager amtool /usr/local/bin/ && cp alertmanager.yml /etc/alertmanager)
 ```
 
 #### Configuration
@@ -130,8 +130,8 @@ $ sudo systemctl enable alertmanager
 Download the source using curl, untar it, and rename the extracted folder to prometheus-files.
 ```console
 $ sudo wget https://github.com/prometheus/prometheus/releases/download/v2.43.0-rc.1%2Bstringlabels/prometheus-2.43.0-rc.1%2Bstringlabels.linux-amd64.tar.gz
-$ sudo tar -xvf prometheus-2.22.0.linux-amd64.tar.gz
-$ sudo mv prometheus-2.22.0.linux-amd64 prometheus-files
+$ sudo tar -xvf prometheus-2.43.0.linux-amd64.tar.gz
+$ sudo mv prometheus-2.43.0.linux-amd64 prometheus-files
 ```
 
 #### Installation
@@ -172,7 +172,7 @@ $ sudo vim /etc/prometheus/prometheus.yml
 
 Put this as Prometheus config. Replace placeholders with correct IPs.
 ```yaml
-gglobal:
+global:
   scrape_interval: 10s
 
 scrape_configs:
